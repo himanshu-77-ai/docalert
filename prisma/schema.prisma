@@ -1,0 +1,232 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  isEmailVerified Boolean @default(false)
+  password      String?
+  image         String?
+  phone         String?
+  whatsapp      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  memberships   WorkspaceMember[]
+  notifications Notification[]
+  ownedWorkspaces Workspace[]   @relation("WorkspaceOwner")
+  emailVerificationTokens EmailVerificationToken[]
+  assignedTasks RenewalTask[]  @relation("TaskAssignee")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workspace {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logo        String?
+  plan        Plan     @default(FREE)
+  stripeId    String?
+  stripeSubId String?
+  planExpiresAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  ownerId     String
+
+  owner       User     @relation("WorkspaceOwner", fields: [ownerId], references: [id])
+  members     WorkspaceMember[]
+  documents   Document[]
+  alertRules  AlertRule[]
+  renewalTasks RenewalTask[]
+}
+
+model WorkspaceMember {
+  id          String    @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        Role      @default(VIEWER)
+  joinedAt    DateTime  @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([workspaceId, userId])
+}
+
+model Document {
+  id            String           @id @default(cuid())
+  name          String
+  category      DocumentCategory
+  expiryDate    DateTime
+  issueDate     DateTime?
+  issuedBy      String?
+  documentNo    String?
+  notes         String?
+  fileUrl       String?
+  fileName      String?
+  fileSize      Int?
+  mimeType      String?
+  tags          String[]
+  status        DocStatus        @default(VALID)
+  workspaceId   String
+  createdById   String
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  remindersSent Int              @default(0)
+  lastReminderAt DateTime?
+
+  workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  notifications Notification[]
+  renewalTasks  RenewalTask[]
+}
+
+model AlertRule {
+  id               String         @id @default(cuid())
+  workspaceId      String
+  daysBeforeExpiry Int
+  channels         AlertChannel[]
+  isActive         Boolean        @default(true)
+  createdAt        DateTime       @default(now())
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id         String       @id @default(cuid())
+  userId     String
+  documentId String?
+  type       NotifType
+  channel    AlertChannel
+  title      String
+  message    String
+  isRead     Boolean      @default(false)
+  sentAt     DateTime     @default(now())
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model EmailVerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model RenewalTask {
+  id          String     @id @default(cuid())
+  documentId  String
+  workspaceId String
+  assignedTo  String?
+  status      TaskStatus @default(PENDING)
+  notes       String?
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  document    Document   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignee    User?      @relation("TaskAssignee", fields: [assignedTo], references: [id], onDelete: SetNull)
+}
+
+enum Plan {
+  FREE
+  BUSINESS
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MANAGER
+  VIEWER
+}
+
+enum DocumentCategory {
+  PERSONAL_ID
+  PASSPORT
+  BUSINESS_LICENSE
+  INSURANCE
+  CONTRACT
+  MEDICAL
+  CERTIFICATION
+  PERMIT
+  VEHICLE
+  PROPERTY
+  TAX
+  OTHER
+}
+
+enum DocStatus {
+  VALID
+  EXPIRING_SOON
+  URGENT
+  EXPIRED
+}
+
+enum AlertChannel {
+  EMAIL
+  WHATSAPP
+  SMS
+  IN_APP
+}
+
+enum NotifType {
+  EXPIRY_REMINDER
+  DOCUMENT_ADDED
+  DOCUMENT_UPDATED
+  TEAM_INVITE
+  SYSTEM
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
