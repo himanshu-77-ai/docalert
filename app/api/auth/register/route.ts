@@ -17,17 +17,16 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, email, password, workspaceName } = registerSchema.parse(body)
 
-    // Check email taken
     const existing = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
     })
+
     if (existing) {
       return NextResponse.json({ error: "Email already registered" }, { status: 400 })
     }
 
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // Create user + workspace + notification settings in a transaction
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -37,7 +36,6 @@ export async function POST(req: Request) {
         },
       })
 
-      // Generate unique slug
       let slug = slugify(workspaceName)
       const existing = await tx.workspace.findUnique({ where: { slug } })
       if (existing) slug = `${slug}-${Date.now()}`
@@ -56,7 +54,6 @@ export async function POST(req: Request) {
       return { user, workspace }
     })
 
-    // Send welcome email (non-blocking)
     sendWelcomeEmail({ to: result.user.email!, name: result.user.name || "there" }).catch(console.error)
 
     return NextResponse.json({
