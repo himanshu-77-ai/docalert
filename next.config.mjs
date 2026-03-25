@@ -1,4 +1,5 @@
 import { withSentryConfig } from '@sentry/nextjs'
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   typescript: {
@@ -12,6 +13,11 @@ const nextConfig = {
       { protocol: 'https', hostname: '*.amazonaws.com' },
     ],
   },
+  // ✅ Ye add karo - Environment variables expose karne ke liye
+  env: {
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  },
   async headers() {
     return [
       {
@@ -24,6 +30,7 @@ const nextConfig = {
     ]
   },
 }
+
 export default withSentryConfig(nextConfig, {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
