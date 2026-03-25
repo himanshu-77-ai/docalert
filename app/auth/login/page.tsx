@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import toast from "react-hot-toast"
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const params = useSearchParams()
   const [email, setEmail] = useState("")
@@ -47,7 +47,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      {/* Left panel */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col justify-between p-12">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-white/10 rounded-lg flex items-center justify-center text-xl">📋</div>
@@ -77,7 +76,6 @@ export default function LoginPage() {
         <p className="text-slate-600 text-sm">© {new Date().getFullYear()} DocAlert. All rights reserved.</p>
       </div>
 
-      {/* Right panel */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-md">
           <div className="lg:hidden flex items-center gap-2 mb-8">
@@ -88,7 +86,6 @@ export default function LoginPage() {
           <h2 className="text-2xl font-bold text-slate-900 mb-1">Sign in</h2>
           <p className="text-slate-500 text-sm mb-8">Welcome back! Enter your details to continue.</p>
 
-          {/* Google sign in */}
           <button
             onClick={handleGoogle}
             disabled={googleLoading}
@@ -164,5 +161,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }
